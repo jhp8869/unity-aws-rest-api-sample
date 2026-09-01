@@ -17,6 +17,10 @@ This repository demonstrates how a Unity client communicates with an AWS Lambda 
 - DynamoDB and S3 based player data access pattern
 - Server-authoritative purchase validation and inventory sync
 - Provider login and Cognito session issuing
+- Google Play and One Store receipt validation samples
+- Unity IAP Google Play purchase flow sample
+- One Store SDK purchase flow sample
+- Server validation before confirming pending Unity IAP orders
 
 ## Structure
 
@@ -33,6 +37,12 @@ Unity/
       LoginApi.cs
       PurchaseItemApi.cs
       PurchaseItemCommand.cs
+      StorePurchaseService.cs
+      StoreReceiptModels.cs
+      UnityIapGooglePurchaseService.cs
+      OneStorePurchaseService.cs
+      ValidatePurchaseApi.cs
+      ValidatePurchaseCommand.cs
       SessionStore.cs
       UnityRestClient.cs
 
@@ -40,13 +50,18 @@ Lambda/
   handlers/
     loginWithProvider.mjs
     purchaseItem.mjs
+    validateGooglePurchase.mjs
+    validateOneStorePurchase.mjs
 
   shared/
     apiResponse.mjs
     authService.mjs
+    iapRewardService.mjs
     inventoryService.mjs
     logger.mjs
+    purchaseLimitService.mjs
     repositories.mjs
+    storeVerification.mjs
 ```
 
 ## Background
