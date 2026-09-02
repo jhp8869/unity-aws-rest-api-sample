@@ -4,7 +4,11 @@
 
 이 저장소는 Unity 클라이언트가 AWS Lambda 기반 백엔드와 REST API로 통신하는 흐름을 보여줍니다. 특히 서버 권한 기반 구매 처리, 플레이어 데이터 검증, 결제 영수증 검증, 인벤토리 동기화 구조를 중심으로 구성했습니다.
 
+- Google Play : https://play.google.com/store/apps/details?id=com.onethesoft.MiningWarrior
+
+
 ## 주요 기능
+
 
 - UnityWebRequest 기반 REST API 클라이언트
 - 공통 API 응답 포맷 처리
