@@ -14,7 +14,6 @@ namespace Portfolio.Game.Login
     public sealed class LoginProcess : MonoBehaviour
     {
         private AppVersion appversion = new AppVersion();
-        [SerializeField] private ApiClientBootstrap api;
         [SerializeField] private string mainSceneName = "Main";
 
         public event Action<string> Failure;
@@ -33,12 +32,12 @@ namespace Portfolio.Game.Login
         /// <summary>실제 LoginProcess.Start()와 같이 버전/점검을 로그인보다 먼저 확인한다.</summary>
         public void CheckAppVersion()
         {
-            StartCoroutine(api.Client.Post(new GetAppVersionRequest(), OnAppVersionLoaded, OnApiError));
+            RestApi.GetAppVersion(new GetAppVersionRequest(), OnAppVersionLoaded, OnApiError);
         }
 
         public void AndroidLogin(string authorizationCode, bool register = false, string timezone = null)
         {
-            StartCoroutine(api.Client.Post(
+            RestApi.Authenticate(
                 new GoogleLoginRequest
                 {
                     AuthorizationCode = authorizationCode,
@@ -51,7 +50,7 @@ namespace Portfolio.Game.Login
 
         public void EditorLogin(string customId, string customPassword, bool register = false, string timezone = null)
         {
-            StartCoroutine(api.Client.Post(
+            RestApi.CustomLogin(
                 new CustomLoginRequest
                 {
                     customId = customId,
@@ -106,7 +105,7 @@ namespace Portfolio.Game.Login
 
         private void DownloadAccount()
         {
-            StartCoroutine(api.Client.Post(
+            RestApi.GetPlayerAccount(
                 new GetPlayerAccountRequest { PlayerId = playerId },
                 OnAccountLoaded,
                 OnApiError));
@@ -138,7 +137,7 @@ namespace Portfolio.Game.Login
 
         private void LoadServerData()
         {
-            StartCoroutine(api.Client.Post(new GetServerDataRequest(), OnServerDataLoaded, OnApiError));
+            RestApi.GetServerData(new GetServerDataRequest(), OnServerDataLoaded, OnApiError);
         }
 
         private void OnServerDataLoaded(GetServerDataResponse result)
@@ -162,7 +161,7 @@ namespace Portfolio.Game.Login
 
         private void LoadPlayerInfo()
         {
-            StartCoroutine(api.Client.Post(
+            RestApi.GetPlayerInfo(
                 new GetPlayerInfoRequest { PlayerId = playerId },
                 result =>
                 {
@@ -175,7 +174,7 @@ namespace Portfolio.Game.Login
 
         private void UpdateAccount(JObject data, Action onSuccess)
         {
-            StartCoroutine(api.Client.Post(
+            RestApi.UpdatePlayerAccount(
                 new UpdatePlayerAccountRequest { PlayerId = playerId, AccountData = data },
                 _ => onSuccess?.Invoke(),
                 OnApiError));

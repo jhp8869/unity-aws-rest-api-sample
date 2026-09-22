@@ -18,8 +18,6 @@ namespace Portfolio.Game.Network
 
     public sealed class PurchaseItemCommand : ApiCommand
     {
-        private readonly MonoBehaviour coroutineRunner;
-        private readonly UnityRestClient apiClient;
         private readonly IPlayerContext playerContext;
         private readonly IInventorySync inventorySync;
         private readonly string shopId;
@@ -27,16 +25,12 @@ namespace Portfolio.Game.Network
         private readonly Action<PurchaseItemResponse> callback;
 
         public PurchaseItemCommand(
-            MonoBehaviour coroutineRunner,
-            UnityRestClient apiClient,
             IPlayerContext playerContext,
             IInventorySync inventorySync,
             string shopId,
             List<string> itemIds,
             Action<PurchaseItemResponse> callback)
         {
-            this.coroutineRunner = coroutineRunner;
-            this.apiClient = apiClient;
             this.playerContext = playerContext;
             this.inventorySync = inventorySync;
             this.shopId = shopId;
@@ -53,7 +47,7 @@ namespace Portfolio.Game.Network
                 PurchaseItemIds = itemIds
             };
 
-            coroutineRunner.StartCoroutine(apiClient.Post<PurchaseItemRequest, PurchaseItemResponse>(
+            RestApi.PurchaseItem(
                 request,
                 result =>
                 {
@@ -61,7 +55,7 @@ namespace Portfolio.Game.Network
                     callback?.Invoke(result);
                     Success();
                 },
-                Error));
+                Error);
         }
 
         private void ApplyInventoryChanges(PurchaseItemResponse response)
