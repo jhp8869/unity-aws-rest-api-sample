@@ -33,12 +33,12 @@ namespace Portfolio.Game.Login
         /// <summary>실제 LoginProcess.Start()와 같이 버전/점검을 로그인보다 먼저 확인한다.</summary>
         public void CheckAppVersion()
         {
-            Run(api.Client.Post(new GetAppVersionRequest(), OnAppVersionLoaded, OnApiError));
+            StartCoroutine(api.Client.Post(new GetAppVersionRequest(), OnAppVersionLoaded, OnApiError));
         }
 
         public void AndroidLogin(string authorizationCode, bool register = false, string timezone = null)
         {
-            Run(api.Client.Post(
+            StartCoroutine(api.Client.Post(
                 new GoogleLoginRequest
                 {
                     AuthorizationCode = authorizationCode,
@@ -51,7 +51,7 @@ namespace Portfolio.Game.Login
 
         public void EditorLogin(string customId, string customPassword, bool register = false, string timezone = null)
         {
-            Run(api.Client.Post(
+            StartCoroutine(api.Client.Post(
                 new CustomLoginRequest
                 {
                     customId = customId,
@@ -106,7 +106,7 @@ namespace Portfolio.Game.Login
 
         private void DownloadAccount()
         {
-            Run(api.Client.Post(
+            StartCoroutine(api.Client.Post(
                 new GetPlayerAccountRequest { PlayerId = playerId },
                 OnAccountLoaded,
                 OnApiError));
@@ -138,7 +138,7 @@ namespace Portfolio.Game.Login
 
         private void LoadServerData()
         {
-            Run(api.Client.Post(new GetServerDataRequest(), OnServerDataLoaded, OnApiError));
+            StartCoroutine(api.Client.Post(new GetServerDataRequest(), OnServerDataLoaded, OnApiError));
         }
 
         private void OnServerDataLoaded(GetServerDataResponse result)
@@ -162,7 +162,7 @@ namespace Portfolio.Game.Login
 
         private void LoadPlayerInfo()
         {
-            Run(api.Client.Post(
+            StartCoroutine(api.Client.Post(
                 new GetPlayerInfoRequest { PlayerId = playerId },
                 result =>
                 {
@@ -175,7 +175,7 @@ namespace Portfolio.Game.Login
 
         private void UpdateAccount(JObject data, Action onSuccess)
         {
-            Run(api.Client.Post(
+            StartCoroutine(api.Client.Post(
                 new UpdatePlayerAccountRequest { PlayerId = playerId, AccountData = data },
                 _ => onSuccess?.Invoke(),
                 OnApiError));
@@ -187,8 +187,6 @@ namespace Portfolio.Game.Login
             return agreement?.Value<bool?>("ConsentToPersonalInfoCollection") == true
                 && agreement.Value<bool?>("ConsentToTermsAndConditions") == true;
         }
-
-        private void Run(System.Collections.IEnumerator routine) => StartCoroutine(routine);
 
         private void OnApiError(ApiError error) => Fail(error?.Message ?? "REST request failed.");
 

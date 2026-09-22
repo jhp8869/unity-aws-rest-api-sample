@@ -33,26 +33,26 @@ Unity 클라이언트가 AWS Lambda 기반 백엔드와 REST API로 통신하는
 ```mermaid
 flowchart LR
     subgraph Unity["Unity Client"]
-        View[SampleView] --> Q[ApiRequestQueue<br/>순차 실행 · 실패 시 잔여 취소]
-        Q --> Cmd[ApiCommand<br/>PurchaseItem / ValidatePurchase]
-        Cmd --> Rest[UnityRestClient<br/>Idempotency-Key · 5xx 재시도 · 백오프]
-        Rest --> Sess[SessionStore<br/>Cognito JWT]
+        Login[LoginProcess<br/>앱 버전 · 로그인 · 계정 확인]
+        Login --> Rest[RestApi / HttpServiceBase<br/>POST JSON · Authorization IdToken]
+        Queue[RestApiJobQueue<br/>요청 순차 처리] --> Rest
+        Game[게임 API 호출<br/>플레이어 · 인벤토리 · 구매] --> Queue
     end
 
-    Rest -- "HTTPS JSON" --> GW[API Gateway<br/>Cognito Authorizer]
+    Rest -- "HTTPS JSON" --> GW[API Gateway]
 
     subgraph AWS["AWS Lambda (Node.js)"]
-        GW --> H[handlers/*<br/>Ajv 스키마 검증 · PlayerId 를 토큰 claim 으로 덮어씀]
-        H --> Grant[iapGrantService<br/>영수증 중복 방지]
-        H --> Limit[purchaseLimitService<br/>일/주/월/영구]
-        H --> Inv[inventoryService<br/>BigInt 수량]
-        Grant --> Store[storeVerification<br/>Google Play · One Store]
-        H --> Repo[repositories<br/>낙관적 락 savePlayerData]
+        GW --> Index[index.handler<br/>엔드포인트 라우팅 · Ajv 검증]
+        Index --> Auth[GoogleLogin / CustomLogin<br/>로그인 · 토큰 발급]
+        Index --> Account[계정 · 플레이어 API<br/>GetPlayerAccount · GetPlayerInfo]
+        Index --> Purchase[구매 API<br/>PurchaseItem · 결제 검증]
+        Purchase --> Store[Google Play / One Store 검증]
+        Index --> Repo[repositories<br/>DynamoDB 조회 · Version 조건 갱신]
     end
 
+    Auth --> Cognito[Cognito 토큰 발급]
     Repo --> DDB[(DynamoDB<br/>Account · PlayerData)]
     Repo --> S3[(S3<br/>Shop · Item 마스터)]
-    Sess -.-> Cognito[(Cognito)]
 ```
 
 ## 원본 프로젝트에서 더 다룬 것 (이 샘플에 없는 부분)
