@@ -4,8 +4,6 @@
 
 Unity 클라이언트가 AWS Lambda 기반 백엔드와 REST API로 통신하는 흐름을 보여줍니다. 서버 권한 기반 구매 처리, 낙관적 락으로 동시 요청 보호, 결제 영수증 검증과 중복 지급 방지, 구매 제한, 인벤토리 동기화 구조를 중심으로 구성했습니다.
 
-[![lambda-tests](https://github.com/jhp8869/unity-aws-rest-api-sample/actions/workflows/lambda-tests.yml/badge.svg)](https://github.com/jhp8869/unity-aws-rest-api-sample/actions/workflows/lambda-tests.yml)
-
 - 출시 앱: https://play.google.com/store/apps/details?id=com.onethesoft.MiningWarrior&hl=ko
 
 ## 프로젝트 스펙
@@ -29,17 +27,6 @@ Unity 클라이언트가 AWS Lambda 기반 백엔드와 REST API로 통신하는
 - Lambda layer: `ajv_nodejs18`
 
 이 프로젝트는 Lightsail의 상시 실행 인스턴스나 nginx/PM2를 사용하지 않는다. API Gateway가 Lambda를 호출하고, Lambda가 DynamoDB와 S3에 접근하는 서버리스 구조다.
-
-## 30초 요약
-
-| 문제 | 해결 | 검증 |
-|---|---|---|
-| Lambda 는 요청마다 병렬 실행 — 같은 플레이어의 구매 두 건이 같은 스냅샷을 읽고 각자 저장하면 재화가 한 번만 차감됨 | `Version` 컬럼 + DynamoDB `ConditionExpression` 낙관적 락, 충돌 시 `Conflict` 로 거부 | `purchaseItem.test.mjs` — 동시 구매 시 하나만 성공, 잔액 정확 |
-| 응답 유실/재설치 후 같은 영수증이 다시 올라와 보상이 두 번 지급됨 | `ProcessedReceipts[store:purchaseToken]` 에 결과 기록, 재요청엔 스토어 API 호출 없이 이전 결과를 **성공으로** 반환 | `validatePurchase.test.mjs` — 두 번 보내도 지급 1회, 스토어 검증 1회 |
-| 여러 상품 동시 구매 중 하나가 실패하면 일부만 구매된 상태가 남음 | 메모리 안에서 전부 검증·적용 후 마지막에 한 번 저장 (all-or-nothing) | `multi-item purchase is all-or-nothing` |
-| 주간 구매 제한이 목요일에 리셋됨 (epoch 7일 단위 계산 버그) | ISO 8601 주(월요일 시작) 키로 비교, 일간 제한은 플레이어 시간대 자정 기준 | `purchaseLimitService.test.mjs` |
-| 클라이언트가 4xx 에도 재시도하고, 재시도 요청을 서버가 구분할 수 없음 | 연결 오류/5xx 만 재시도, 모든 시도에 같은 `Idempotency-Key` 헤더 | `UnityRestClient.cs` |
-| 큐 앞 명령이 실패해도 뒤 명령이 남아 있다가 엉뚱한 상태에서 실행됨 | 실패 시 남은 명령 전부 취소 + `Failed` 이벤트로 UI 복구 | `ApiRequestQueue.cs` |
 
 ## 아키텍처
 
@@ -68,47 +55,12 @@ flowchart LR
     Sess -.-> Cognito[(Cognito)]
 ```
 
-## 실행과 테스트
-
-```bash
-cd Lambda
-npm install
-npm test        # node:test, AWS 없이 인메모리 repositories 로 핸들러 전체 실행 (24 tests)
-```
-
-핸들러는 `createHandler({ repositories, storeVerification, now })` 형태로 의존성을 주입받습니다. 배포용 `handler` 는 실제 DynamoDB/S3/스토어 API 를 쓰고, 테스트는 `tests/fixtures.mjs` 의 인메모리 구현(낙관적 락 동작까지 재현)을 넣어 스키마 검증 → 계정 상태 → 구매 제한 → 재화 차감 → 지급 → 저장까지 한 번에 검증합니다.
-
-```text
-✔ purchase consumes currency, grants product and rewards, saves once
-✔ multi-item purchase is all-or-nothing: second item failing rolls back the first
-✔ daily purchase limit is enforced and resets on the next local day
-✔ concurrent purchases on the same snapshot: one wins, the other gets Conflict (no double spend)
-✔ same receipt sent twice grants once and returns the previous result
-✔ rejected receipt returns InvalidPurchase (not a server error) and saves nothing
-✔ weekly limit uses ISO weeks starting Monday (regression: epoch weeks started on Thursday)
-```
-
-## 설계 결정과 트레이드오프
-
-**서버 권한 구조.** 재화 차감, 아이템 지급, 구매 제한 판정은 전부 서버에서 하고 클라이언트는 결과를 반영만 합니다. 클라이언트가 보낸 `PlayerId` 는 신뢰하지 않고 API Gateway Cognito authorizer 가 검증한 토큰의 claim 으로 덮어씁니다.
-
-**낙관적 락 vs 클라이언트 직렬화.** 클라이언트 `ApiRequestQueue` 가 요청을 하나씩 보내므로 정상 상황에서 충돌은 거의 없습니다. 그래도 서버에 낙관적 락을 둔 이유는, 클라이언트 큐는 조작 가능하고(치트), 같은 계정이 두 기기에서 접속할 수 있으며, 운영 툴이 같은 데이터를 동시에 수정할 수 있기 때문입니다. 비관적 락(DynamoDB 에는 없음)이나 트랜잭션 대신 `Version` 조건부 쓰기를 택한 건 읽기 1회 + 쓰기 1회로 끝나 비용이 가장 낮고, 충돌 시 클라이언트가 최신 데이터를 다시 받고 재시도하면 되기 때문입니다.
-
-**영수증 중복 방지가 `Idempotency-Key` 와 별개인 이유.** 앱 재설치 후 Unity IAP 가 미완료 주문을 다시 올려주면 요청 키는 새것이지만 `purchaseToken` 은 같습니다. 그래서 스토어 토큰을 플레이어 데이터에 기록하고, 이미 처리한 영수증은 스토어 API 를 다시 호출하지 않고 **성공 + 이전 결과**를 돌려줍니다. 에러를 돌려주면 클라이언트가 pending order 를 confirm 하지 못해 다음 실행마다 같은 영수증이 올라옵니다. One Store 는 검증과 consume 이 한 호출이라 두 번째 호출이 실패하므로, 이 기록이 없으면 첫 지급이 저장에 실패했을 때 보상이 영구히 유실됩니다.
-
-**스토어 검증 실패는 4xx 다.** 이전 구현은 스토어 거부를 `InternalServerError` 로 돌려줘서 클라이언트가 재시도했습니다. 재시도해도 결과가 같으므로 `InvalidPurchase` 전용 코드로 분리하고, 클라이언트 `ApiError.IsRetryable` 은 네트워크/5xx/Conflict 만 재시도 대상으로 봅니다.
-
-**수량을 문자열로 저장.** 방치형 게임의 재화는 `2^53` 을 넘기 쉽습니다. DynamoDB Number 도 38자리까지 가능하지만 JS `number` 로 읽는 순간 정밀도가 깨지므로 서버는 `BigInt` 로 계산하고 문자열로 저장합니다 (`inventoryService.test.mjs`).
-
-**구매 제한 시간 경계.** 일간 제한은 UTC 자정이 아니라 플레이어 시간대(`Account.Timezone`) 자정에 리셋합니다. 한국 유저는 UTC 자정이 오전 9시라 "하루 2회" 상품이 아침에 리셋되는 이상한 경험을 하기 때문입니다.
-
 ## 원본 프로젝트에서 더 다룬 것 (이 샘플에 없는 부분)
 
 - **인증**: Google Play Games 인증 코드 → Cognito 사용자 풀 로그인/가입, 토큰 갱신
 - **API 구성**: 로그인/토큰 갱신, 서버 시간, 앱 버전 확인, 닉네임, 인벤토리·플레이어 데이터 조회/저장, 상점 구매, Google Play 결제 검증, 쿠폰 조회/사용 등 13종. 재화·결제처럼 돈이 걸린 경로만 서버 권한으로 두고, 나머지 진행 데이터는 클라이언트가 계산해 `SetPlayerData` 로 저장하는 하이브리드 구조
 - **운영 기능**: 랭킹, 푸시 알림(Amazon SNS), 점검 모드, 쿠폰, 어드민 로그인
 - **인프라**: API Gateway + Lambda + DynamoDB + S3, 스테이지(dev/prod) 분리, 환경변수/Secret Manager 로 키 주입
-- **이후 프로젝트(템빨 용병단)** 에서는 이 REST 구조를 WebSocket 상시 연결 서버로 옮겼습니다 → [unity-websocket-game-server-sample](https://github.com/jhp8869/unity-websocket-game-server-sample)
 
 ## ✨ 주요 기능
 
