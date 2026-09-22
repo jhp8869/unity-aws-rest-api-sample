@@ -13,11 +13,10 @@ namespace Portfolio.Game.Login
     /// </summary>
     public sealed class LoginProcess : MonoBehaviour
     {
+        private AppVersion appversion = new AppVersion();
         [SerializeField] private ApiClientBootstrap api;
         [SerializeField] private string mainSceneName = "Main";
 
-        public LoginState State { get; private set; } = LoginState.Idle;
-        public event Action<LoginState> StateChanged;
         public event Action<string> Failure;
         public event Action<string> AccountBanDetected;
         public event Action<DateTime> DeleteRecoveryRequired;
@@ -26,8 +25,6 @@ namespace Portfolio.Game.Login
         public event Action MainSceneReady;
 
         private string playerId;
-        private bool loginRegister;
-
         private void Start()
         {
             CheckAppVersion();
@@ -36,14 +33,11 @@ namespace Portfolio.Game.Login
         /// <summary>실제 LoginProcess.Start()와 같이 버전/점검을 로그인보다 먼저 확인한다.</summary>
         public void CheckAppVersion()
         {
-            SetState(LoginState.CheckingAppVersion);
             Run(api.Client.Post(new GetAppVersionRequest(), OnAppVersionLoaded, OnApiError));
         }
 
-        public void BeginGoogleLogin(string authorizationCode, bool register = false, string timezone = null)
+        public void AndroidLogin(string authorizationCode, bool register = false, string timezone = null)
         {
-            loginRegister = register;
-            SetState(LoginState.Authenticating);
             Run(api.Client.Post(
                 new GoogleLoginRequest
                 {
@@ -55,10 +49,8 @@ namespace Portfolio.Game.Login
                 OnApiError));
         }
 
-        public void BeginEditorLogin(string customId, string customPassword, bool register = false, string timezone = null)
+        public void EditorLogin(string customId, string customPassword, bool register = false, string timezone = null)
         {
-            loginRegister = register;
-            SetState(LoginState.Authenticating);
             Run(api.Client.Post(
                 new CustomLoginRequest
                 {
@@ -92,25 +84,23 @@ namespace Portfolio.Game.Login
 
         private void OnAppVersionLoaded(GetAppVersionResponse result)
         {
-            AppVersion current = AppVersion.FromUnityVersion();
+            appversion.Refresh();
             if (result?.Version == null || result.Version.IsChecking())
             {
                 Fail(result?.Version?.Message ?? "Server is under maintenance.");
                 return;
             }
-            if (!result.Version.IsAcceptVersion(current))
+            if (!result.Version.IsAcceptVersion(appversion))
             {
                 Fail("App update required for this service version.");
                 return;
             }
-            SetState(LoginState.LoginAvailable);
         }
 
         private void OnLoginSucceeded(GoogleLoginResponse result)
         {
             api.SessionStore.SetSession(result.ToSession());
             playerId = result.PlayerId;
-            SetState(LoginState.LoadingAccount);
             DownloadAccount();
         }
 
@@ -129,19 +119,16 @@ namespace Portfolio.Game.Login
 
             if (current.BanInfo.Active)
             {
-                SetState(LoginState.Banned);
                 AccountBanDetected?.Invoke(current.BanInfo.Reason);
                 return;
             }
             if (current.ReserveDeleteDate.HasValue)
             {
-                SetState(LoginState.DeleteRecoveryRequired);
                 DeleteRecoveryRequired?.Invoke(current.ReserveDeleteDate.Value);
                 return;
             }
             if (!HasRequiredAgreement(current.AccountData))
             {
-                SetState(LoginState.AgreementRequired);
                 AgreementRequired?.Invoke(current.AccountData["Agreement"] as JObject ?? new JObject());
                 return;
             }
@@ -151,7 +138,6 @@ namespace Portfolio.Game.Login
 
         private void LoadServerData()
         {
-            SetState(LoginState.LoadingServers);
             Run(api.Client.Post(new GetServerDataRequest(), OnServerDataLoaded, OnApiError));
         }
 
@@ -171,19 +157,16 @@ namespace Portfolio.Game.Login
                     return;
                 }
             }
-            SetState(LoginState.ServerSelectionRequired);
             ServerSelectionRequired?.Invoke(result);
         }
 
         private void LoadPlayerInfo()
         {
-            SetState(LoginState.LoadingPlayerInfo);
             Run(api.Client.Post(
                 new GetPlayerInfoRequest { PlayerId = playerId },
                 result =>
                 {
                     PlayerManager.Instance.GetCurrentPlayer.ApplyPlayerData(result.PlayerInfo);
-                    SetState(LoginState.Ready);
                     MainSceneReady?.Invoke();
                     if (!string.IsNullOrEmpty(mainSceneName)) SceneManager.LoadScene(mainSceneName);
                 },
@@ -211,31 +194,7 @@ namespace Portfolio.Game.Login
 
         private void Fail(string message)
         {
-            SetState(LoginState.Failed);
             Failure?.Invoke(message);
         }
-
-        private void SetState(LoginState next)
-        {
-            State = next;
-            StateChanged?.Invoke(next);
-        }
-    }
-
-    public enum LoginState
-    {
-        Idle,
-        CheckingAppVersion,
-        LoginAvailable,
-        Authenticating,
-        LoadingAccount,
-        AgreementRequired,
-        DeleteRecoveryRequired,
-        Banned,
-        LoadingServers,
-        ServerSelectionRequired,
-        LoadingPlayerInfo,
-        Ready,
-        Failed
     }
 }
