@@ -28,6 +28,18 @@ Unity 클라이언트가 AWS Lambda 기반 백엔드와 REST API로 통신하는
 
 이 프로젝트는 Lightsail의 상시 실행 인스턴스나 nginx/PM2를 사용하지 않는다. API Gateway가 Lambda를 호출하고, Lambda가 DynamoDB와 S3에 접근하는 서버리스 구조다.
 
+## 기술 스택
+
+- **Client**: Unity 6, C#, UnityWebRequest, Newtonsoft.Json
+- **Client architecture**: `LoginProcess`, `RestApi`, `HttpServiceBase`, REST API callback flow
+- **Runtime**: Node.js `22.x`, AWS Lambda
+- **API**: Amazon API Gateway, JSON over HTTPS, POST endpoint
+- **Authentication**: Google Play Games login, Amazon Cognito token
+- **Storage**: Amazon DynamoDB, Amazon S3
+- **Validation**: Ajv JSON schema validation
+- **Payments**: Google Play Billing, One Store, server-side receipt verification
+- **Concurrency**: DynamoDB `Version` condition expression optimistic locking
+
 ## 아키텍처
 
 ```mermaid
