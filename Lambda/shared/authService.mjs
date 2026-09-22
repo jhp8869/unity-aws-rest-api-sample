@@ -56,11 +56,11 @@ async function loginWithPassword(cognito, username, password) {
   const auth = response.AuthenticationResult;
 
   return {
-    playerId: username,
-    idToken: auth.IdToken,
-    accessToken: auth.AccessToken,
-    refreshToken: auth.RefreshToken,
-    tokenType: auth.TokenType
+    PlayerId: username,
+    IdToken: auth.IdToken,
+    AccessToken: auth.AccessToken,
+    RefreshToken: auth.RefreshToken,
+    TokenType: auth.TokenType
   };
 }
 

@@ -71,6 +71,23 @@ flowchart LR
 - ⏳ **구매 제한**: 일일/주간/월간/영구 구매 제한 처리
 - 🚫 **예외 처리**: 재화 부족, 잘못된 요청, 정지 계정 등 오류 응답 처리
 
+## 🔑 로그인 진입 흐름
+
+실제 `MiningWarrior`의 `LoginProcess` 순서를 기준으로, 샘플의 첫 씬 진입 흐름도 다음 단계로 구성합니다.
+
+```text
+GetAppVersion
+  → GoogleLogin / CustomLogin
+  → GetPlayerAccount
+  → BanInfo·탈퇴 예약·필수 약관 확인
+  → GetServerData 및 서버 선택
+  → GetPlayerInfo
+  → PlayerManager에 상태 반영
+  → Main 씬 진입
+```
+
+샘플의 `LoginProcess`는 Google Play·UI 팝업·Addressable·SNS SDK를 직접 의존하지 않고 이벤트로 분리합니다. 따라서 실제 프로젝트의 로그인 순서와 서버 계약은 유지하면서 포트폴리오 샘플에서 독립적으로 확인할 수 있습니다.
+
 ## 🎮 Unity SampleView
 
 서버 API 구조뿐 아니라 Unity 화면에서 사용자가 버튼을 눌렀을 때 어떤 순서로 서버 기능이 호출되는지도 함께 보여줍니다.
@@ -87,7 +104,7 @@ Unity 클라이언트가 provider authorization code를 서버로 전달합니�
 
 ```text
 Unity Client
-  → LoginWithProvider API
+  → GoogleLogin API
   → Provider 사용자 식별자 변환
   → Cognito 로그인/가입
   → IdToken, AccessToken, RefreshToken 반환
@@ -96,7 +113,7 @@ Unity Client
 관련 파일:
 
 - `Unity/Runtime/Network/LoginApi.cs`
-- `Lambda/handlers/loginWithProvider.mjs`
+- `Lambda/handlers/googleLogin.mjs` (GoogleLogin handler)
 - `Lambda/shared/authService.mjs`
 
 ### 2. 일반 재화 구매
@@ -166,6 +183,9 @@ One Store 구매 완료
 ```text
 Unity/
   Runtime/
+    Login/
+      AppVersion.cs                   # 앱 버전·점검 상태 모델
+      LoginProcess.cs                 # 실제 LoginProcess 기반 첫 씬 진입 흐름
     Network/
       ApiError.cs                       # 에러 모델, ApiErrorCode, IsRetryable
       ApiClientBootstrap.cs             # 씬에서 UnityRestClient/SessionStore 생성
@@ -174,7 +194,8 @@ Unity/
       AuthType.cs                       # 인증 타입
       IApiRequest.cs                    # API 요청 인터페이스
       ISessionStore.cs                  # 세션 저장소 인터페이스
-      LoginApi.cs                       # 로그인 요청/응답 모델
+      LoginApi.cs                       # GoogleLogin/CustomLogin 요청·응답 모델
+      LoginFlowApi.cs                   # 버전·계정·서버·PlayerInfo API 모델
       PurchaseItemApi.cs                # 일반 구매 요청/응답 모델
       PurchaseItemCommand.cs            # 구매 API 실행 및 인벤토리 반영
       StorePurchaseService.cs           # 스토어 결제 공통 서비스
@@ -185,6 +206,9 @@ Unity/
       ValidatePurchaseCommand.cs        # 결제 검증 API 실행
       SessionStore.cs                   # 세션 저장 구현
       UnityRestClient.cs                # UnityWebRequest REST 클라이언트, Idempotency-Key, 5xx 재시도
+    Player/
+      PlayerInfo.cs                     # AccountData/PlayerInfo 상태 모델
+      PlayerManager.cs                  # 현재 플레이어 보관소
   SampleView/
     ShopPurchaseSampleView.cs           # 상점 구매 → 큐 → 결과/실패 UI
     PurchaseValidationSampleView.cs     # 영수증 검증 → 보상 반영
@@ -192,7 +216,7 @@ Unity/
 Lambda/
   package.json                          # npm test
   handlers/                             # createHandler(deps) 로 의존성 주입, handler = 배포용
-    loginWithProvider.mjs               # provider 로그인 및 Cognito 세션 발급
+    googleLogin.mjs                     # Google provider 로그인 및 Cognito 세션 발급
     purchaseItem.mjs                    # 일반 재화 구매 처리
     validateGooglePurchase.mjs          # Google Play 영수증 검증
     validateOneStorePurchase.mjs        # One Store 영수증 검증

@@ -16,10 +16,10 @@ const ajv = new Ajv();
 
 const schema = {
   type: "object",
-  required: ["authorizationCode", "register"],
+  required: ["authorization_code", "register"],
   properties: {
-    authorizationCode: { type: "string", minLength: 1 },
-    timezoneOffset: { type: "string" },
+    authorization_code: { type: "string", minLength: 1 },
+    Timezone: { type: "string" },
     register: { type: "boolean" }
   }
 };
@@ -39,7 +39,7 @@ export const handler = async (event) => {
   }
 
   try {
-    const providerPlayerId = await exchangeProviderCode(body.authorizationCode);
+    const providerPlayerId = await exchangeProviderCode(body.authorization_code);
 
     try {
       const session = await loginPlayer(cognito, providerPlayerId);
@@ -52,13 +52,13 @@ export const handler = async (event) => {
       const session = await signUpPlayer(
         cognito,
         providerPlayerId,
-        body.timezoneOffset
+        body.Timezone
       );
 
       return ok(session);
     }
   } catch (error) {
-    logger.error("LoginWithProvider failed", error);
+    logger.error("GoogleLogin failed", error);
     return fail(ErrorCode.InternalServerError, "Internal server error");
   }
 };
