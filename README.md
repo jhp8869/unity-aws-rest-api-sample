@@ -78,20 +78,47 @@ flowchart LR
 
 ## 🔑 로그인 진입 흐름
 
-실제 `MiningWarrior`의 `LoginProcess` 순서를 기준으로, 샘플의 첫 씬 진입 흐름도 다음 단계로 구성합니다.
+실제 `MiningWarrior`의 앱 실행부터 인게임 진입까지의 흐름입니다.
 
 ```text
-GetAppVersion
-  → GoogleLogin / CustomLogin
-  → GetPlayerAccount
-  → BanInfo·탈퇴 예약·필수 약관 확인
-  → GetServerData 및 서버 선택
-  → GetPlayerInfo
-  → PlayerManager에 상태 반영
-  → Main 씬 진입
+앱 실행
+  ↓
+LoginProcess 시작
+  ↓
+앱 버전 및 서버 점검 상태 확인
+  ├─ 업데이트 필요 → 스토어 이동
+  ├─ 서버 점검 중   → 점검 안내 후 종료
+  └─ 정상
+      ↓
+로그인
+  ├─ Unity Editor → CustomLogin
+  └─ Android      → Google Play 인증 → GoogleLogin
+      ↓
+플레이어 계정 불러오기
+  ├─ 탈퇴 예약 계정 → 탈퇴 취소 여부 확인
+  ├─ 이용 정지 계정 → 정지 안내 후 종료
+  └─ 정상
+      ↓
+필수 약관 동의 확인 및 계정 정보 저장
+      ↓
+SNS·디바이스 정보 저장 및 추가 리소스 다운로드
+      ↓
+서버 목록 불러오기
+  ├─ 서버가 여러 개 → 서버 선택
+  └─ 서버가 하나     → 자동 선택
+      ↓
+선택한 서버 정보 저장
+      ↓
+플레이어 정보 불러오기 → PlayerManager 반영
+      ↓
+닉네임·프롤로그 처리
+      ↓
+Main 씬 로드
+      ↓
+인게임 진입
 ```
 
-샘플의 `LoginProcess`는 Google Play·UI 팝업·Addressable·SNS SDK를 직접 의존하지 않고 이벤트로 분리합니다. 따라서 실제 프로젝트의 로그인 순서와 서버 계약은 유지하면서 포트폴리오 샘플에서 독립적으로 확인할 수 있습니다.
+샘플의 `LoginProcess`는 이 진입 순서를 중심으로 구성하고, 실제 네트워크 호출은 `RestApi → HttpServiceBase` 계층으로 분리했습니다. Google Play·UI 팝업·Addressable·SNS SDK는 포트폴리오 샘플에서 이벤트와 콜백으로 대체했습니다.
 
 ## 🎮 Unity SampleView
 
@@ -105,18 +132,24 @@ GetAppVersion
 
 ### 1. 로그인
 
-Unity 클라이언트가 provider authorization code를 서버로 전달합니다. 서버는 provider 사용자 식별자를 내부 플레이어 식별자로 변환하고, Cognito를 통해 로그인 세션을 발급합니다.
+Unity 클라이언트는 원본과 동일하게 플랫폼별 로그인 API를 호출합니다. Android에서는 Google Play Games의 server-side authorization code를 전달하고, Editor에서는 `CustomLogin`을 사용합니다. 서버는 provider 사용자 식별자를 내부 플레이어 식별자로 변환하고 Cognito 세션을 발급합니다.
 
 ```text
-Unity Client
+Unity Editor → CustomLogin
+Android
+  → Google Play Games Authenticate
+  → RequestServerSideAccess
   → GoogleLogin API
-  → Provider 사용자 식별자 변환
-  → Cognito 로그인/가입
-  → IdToken, AccessToken, RefreshToken 반환
+      → Provider 사용자 식별자 변환
+      → Cognito 로그인/가입
+  → PlayerId, IdToken, AccessToken, RefreshToken 반환
 ```
 
 관련 파일:
 
+- `Unity/Runtime/Login/LoginProcess.cs`
+- `Unity/Runtime/Network/RestApi.cs`
+- `Unity/Runtime/Network/HttpServiceBase.cs`
 - `Unity/Runtime/Network/LoginApi.cs`
 - `Lambda/handlers/googleLogin.mjs` (GoogleLogin handler)
 - `Lambda/shared/authService.mjs`
