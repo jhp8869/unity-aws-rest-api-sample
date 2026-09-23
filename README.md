@@ -2,7 +2,7 @@
 
 > 상용 Unity 모바일 RPG **광여전사 키우기**(서비스 중)에서 사용하는 클라이언트-서버 통신 구조를 포트폴리오용으로 재구성한 샘플입니다.
 
-Unity 클라이언트가 AWS Lambda 기반 백엔드와 REST API로 통신하는 흐름을 보여줍니다. 서버 권한 기반 구매 처리, 낙관적 락으로 동시 요청 보호, 결제 영수증 검증과 중복 지급 방지, 구매 제한, 인벤토리 동기화 구조를 중심으로 구성했습니다.
+Unity 클라이언트가 AWS Lambda 기반 백엔드와 REST API로 통신하는 흐름을 보여줍니다. 서버 권한 기반 구매 처리, 결제 영수증 검증과 중복 지급 방지, 구매 제한, 인벤토리 동기화 구조를 중심으로 구성했습니다.
 
 - 출시 앱: https://play.google.com/store/apps/details?id=com.onethesoft.MiningWarrior&hl=ko
 
@@ -38,7 +38,6 @@ Unity 클라이언트가 AWS Lambda 기반 백엔드와 REST API로 통신하는
 - **Storage**: Amazon DynamoDB, Amazon S3
 - **Validation**: Ajv JSON schema validation
 - **Payments**: Google Play Billing, One Store, server-side receipt verification
-- **Concurrency**: DynamoDB `Version` condition expression optimistic locking
 
 ## 아키텍처
 
@@ -59,7 +58,7 @@ flowchart LR
         Index --> Account[계정 · 플레이어 API<br/>GetPlayerAccount · GetPlayerInfo]
         Index --> Purchase[구매 API<br/>PurchaseItem · 결제 검증]
         Purchase --> Store[Google Play / One Store 검증]
-        Index --> Repo[repositories<br/>DynamoDB 조회 · Version 조건 갱신]
+        Index --> Repo[repositories<br/>DynamoDB 조회 · 플레이어 데이터 저장]
     end
 
     Auth --> Cognito[Cognito 토큰 발급]
@@ -276,7 +275,7 @@ Lambda/
     logger.mjs                          # 로깅 유틸
     request.mjs                         # API Gateway body·Cognito PlayerId 처리
     purchaseLimitService.mjs            # 구매 제한 검증
-    repositories.mjs                    # Account/PlayerData·서버 목록 DynamoDB/S3 접근
+      repositories.mjs                    # Account/PlayerData·서버 목록 DynamoDB/S3 접근
     storeVerification.mjs               # 스토어 영수증 검증
 ```
 
