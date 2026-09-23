@@ -279,29 +279,6 @@ Lambda/
 .github/workflows/lambda-tests.yml      # push/PR 마다 npm test
 ```
 
-## 🛠️ 기술 스택
-
-### Client
-
-- **Unity / C#**: 모바일 게임 클라이언트
-- **UnityWebRequest**: REST API 통신
-- **Newtonsoft.Json**: JSON 직렬화/역직렬화
-- **Unity IAP**: Google Play 인앱 결제 처리
-- **One Store SDK**: One Store 인앱 결제 처리
-
-### Backend
-
-- **AWS Lambda / Node.js 22.x**: 서버리스 API 핸들러
-- **Amazon Cognito**: 사용자 인증 및 JWT 세션 발급
-- **Amazon DynamoDB**: 계정/플레이어 데이터 저장
-- **Amazon S3**: 상점/아이템 마스터 데이터 저장
-- **Ajv**: Lambda 요청 스키마 검증
-
-### Store APIs
-
-- **Google Play Developer API**: Google Play 결제 영수증 검증
-- **One Store IAP API**: One Store 결제 검증 및 consume 처리
-
 ## 에러 코드
 
 | retCode | 의미 | 클라이언트 처리 |
