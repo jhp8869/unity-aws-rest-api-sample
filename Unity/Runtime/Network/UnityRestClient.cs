@@ -61,7 +61,9 @@ namespace Portfolio.Game.Network
             where TRequest : IApiRequest<TResponse>
         {
             string url = $"{baseUrl}/{request.Endpoint}";
-            string json = JsonConvert.SerializeObject(request);
+            string json = request is IApiRequestPayload payload
+                ? payload.ToJson()
+                : JsonConvert.SerializeObject(request);
             byte[] payload = Encoding.UTF8.GetBytes(json);
             string idempotencyKey = Guid.NewGuid().ToString();
 

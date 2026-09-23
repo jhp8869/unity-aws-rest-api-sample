@@ -23,7 +23,6 @@ namespace Portfolio.Game.Login
         public event Action<GetServerDataResponse> ServerSelectionRequired;
         public event Action MainSceneReady;
 
-        private string playerId;
         private void Start()
         {
             CheckAppVersion();
@@ -98,15 +97,16 @@ namespace Portfolio.Game.Login
 
         private void OnLoginSucceeded(GoogleLoginResponse result)
         {
-            api.SessionStore.SetSession(result.ToSession());
-            playerId = result.PlayerId;
+            RestApi.SetSession(result.ToSession());
+            // 원본 MiningWarrior LoginProcess와 동일하게 로그인 직후 현재 플레이어에 저장한다.
+            PlayerManager.Instance.GetCurrentPlayer.PlayerId = result.PlayerId;
             DownloadAccount();
         }
 
         private void DownloadAccount()
         {
             RestApi.GetPlayerAccount(
-                new GetPlayerAccountRequest { PlayerId = playerId },
+                new GetPlayerAccountRequest { PlayerId = PlayerManager.Instance.GetCurrentPlayer.PlayerId },
                 OnAccountLoaded,
                 OnApiError));
         }
@@ -162,7 +162,7 @@ namespace Portfolio.Game.Login
         private void LoadPlayerInfo()
         {
             RestApi.GetPlayerInfo(
-                new GetPlayerInfoRequest { PlayerId = playerId },
+                new GetPlayerInfoRequest { PlayerId = PlayerManager.Instance.GetCurrentPlayer.PlayerId },
                 result =>
                 {
                     PlayerManager.Instance.GetCurrentPlayer.ApplyPlayerData(result.PlayerInfo);
@@ -175,7 +175,11 @@ namespace Portfolio.Game.Login
         private void UpdateAccount(JObject data, Action onSuccess)
         {
             RestApi.UpdatePlayerAccount(
-                new UpdatePlayerAccountRequest { PlayerId = playerId, AccountData = data },
+                new UpdatePlayerAccountRequest
+                {
+                    PlayerId = PlayerManager.Instance.GetCurrentPlayer.PlayerId,
+                    AccountData = data
+                },
                 _ => onSuccess?.Invoke(),
                 OnApiError));
         }

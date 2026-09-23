@@ -8,6 +8,9 @@ namespace Portfolio.Game.Network
     /// </summary>
     public static class RestApi
     {
+        public static void SetSession(LoginSession session)
+            => HttpServiceBase.Instance.SetSession(session);
+
         public static void Authenticate(GoogleLoginRequest request, Action<GoogleLoginResponse> callback, Action<ApiError> error)
             => HttpServiceBase.Instance.MakeApiCall(request, callback, error);
 

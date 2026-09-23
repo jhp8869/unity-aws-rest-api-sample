@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 using Portfolio.Game.Login;
 
 namespace Portfolio.Game.Network
@@ -25,15 +26,26 @@ namespace Portfolio.Game.Network
 
     public sealed class GetPlayerAccountResponse
     {
-        public JObject AccountData;
+        [JsonExtensionData]
+        private IDictionary<string, JToken> fields;
+
+        [JsonIgnore]
+        public JObject AccountData => JObject.FromObject(fields ?? new Dictionary<string, JToken>());
     }
 
-    public sealed class UpdatePlayerAccountRequest : IApiRequest<UpdatePlayerAccountResponse>
+    public sealed class UpdatePlayerAccountRequest : IApiRequest<UpdatePlayerAccountResponse>, IApiRequestPayload
     {
         [JsonIgnore] public string Endpoint => "UpdatePlayerAccount";
         [JsonIgnore] public AuthType AuthType => AuthType.Login;
         public string PlayerId;
         public JObject AccountData;
+
+        public string ToJson()
+        {
+            JObject payload = AccountData == null ? new JObject() : (JObject)AccountData.DeepClone();
+            payload["PlayerId"] = PlayerId;
+            return payload.ToString(Formatting.None);
+        }
     }
 
     public sealed class UpdatePlayerAccountResponse { }
@@ -69,6 +81,10 @@ namespace Portfolio.Game.Network
 
     public sealed class GetPlayerInfoResponse
     {
-        public JObject PlayerInfo;
+        [JsonExtensionData]
+        private IDictionary<string, JToken> fields;
+
+        [JsonIgnore]
+        public JObject PlayerInfo => JObject.FromObject(fields ?? new Dictionary<string, JToken>());
     }
 }

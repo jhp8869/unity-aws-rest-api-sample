@@ -1,0 +1,18 @@
+{
+  "name": "unity-aws-rest-api-sample-lambda",
+  "version": "1.1.0",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.600.0",
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "ajv": "^8.17.1",
+    "axios": "^1.7.2",
+    "googleapis": "^140.0.0"
+  }
+}

@@ -226,14 +226,16 @@ Unity/
       LoginProcess.cs                 # 실제 LoginProcess 기반 첫 씬 진입 흐름
     Network/
       ApiError.cs                       # 에러 모델, ApiErrorCode, IsRetryable
-      ApiClientBootstrap.cs             # 씬에서 UnityRestClient/SessionStore 생성
+      ApiClientBootstrap.cs             # 씬에서 HttpServiceBase/SessionStore 생성
       ApiResponse.cs                    # 공통 응답 래퍼
       ApiRequestQueue.cs                # 순차 API 요청 큐, 실패 시 잔여 취소
       AuthType.cs                       # 인증 타입
-      IApiRequest.cs                    # API 요청 인터페이스
+      IApiRequest.cs                    # API 요청 인터페이스·원본 요청 직렬화 확장
       ISessionStore.cs                  # 세션 저장소 인터페이스
       LoginApi.cs                       # GoogleLogin/CustomLogin 요청·응답 모델
-      LoginFlowApi.cs                   # 버전·계정·서버·PlayerInfo API 모델
+      LoginFlowApi.cs                   # 버전·계정·서버·PlayerInfo API 모델·원본 응답 형태
+      RestApi.cs                        # 원본 RestApi facade, 엔드포인트별 호출
+      HttpServiceBase.cs                # 세션·공통 HTTP 실행 계층
       PurchaseItemApi.cs                # 일반 구매 요청/응답 모델
       PurchaseItemCommand.cs            # 구매 API 실행 및 인벤토리 반영
       StorePurchaseService.cs           # 스토어 결제 공통 서비스
@@ -252,9 +254,15 @@ Unity/
     PurchaseValidationSampleView.cs     # 영수증 검증 → 보상 반영
 
 Lambda/
-  package.json                          # npm test
-  handlers/                             # createHandler(deps) 로 의존성 주입, handler = 배포용
+  package.json                          # Lambda 런타임 의존성
+  handlers/                             # API Gateway 엔드포인트별 Lambda handler
     googleLogin.mjs                     # Google provider 로그인 및 Cognito 세션 발급
+    customLogin.mjs                     # Editor용 CustomLogin 및 Cognito 세션 발급
+    getAppVersion.mjs                   # 앱 버전·점검 상태 반환
+    getPlayerAccount.mjs                # 계정 상태 조회
+    updatePlayerAccount.mjs             # 약관·서버·SNS·디바이스 정보 갱신
+    getServerData.mjs                   # 서버 목록·서버 상태 조회
+    getPlayerInfo.mjs                   # 선택 서버의 플레이어 데이터 조회
     purchaseItem.mjs                    # 일반 재화 구매 처리
     validateGooglePurchase.mjs          # Google Play 영수증 검증
     validateOneStorePurchase.mjs        # One Store 영수증 검증
@@ -266,17 +274,10 @@ Lambda/
     iapRewardService.mjs                # IAP 보상 계산
     inventoryService.mjs                # 아이템 지급/재화 차감
     logger.mjs                          # 로깅 유틸
+    request.mjs                         # API Gateway body·Cognito PlayerId 처리
     purchaseLimitService.mjs            # 구매 제한 검증
-    repositories.mjs                    # DynamoDB/S3 접근, Version 기반 낙관적 락
+    repositories.mjs                    # Account/PlayerData·서버 목록 DynamoDB/S3 접근
     storeVerification.mjs               # 스토어 영수증 검증
-  tests/
-    fixtures.mjs                        # 인메모리 repositories (낙관적 락 재현)
-    purchaseItem.test.mjs
-    validatePurchase.test.mjs
-    purchaseLimitService.test.mjs
-    inventoryService.test.mjs
-
-.github/workflows/lambda-tests.yml      # push/PR 마다 npm test
 ```
 
 ## 에러 코드

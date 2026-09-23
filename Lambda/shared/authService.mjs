@@ -19,6 +19,16 @@ export async function exchangeProviderCode(authorizationCode) {
   return `provider:${hash(authorizationCode, playerHashSecret)}`;
 }
 
+export async function exchangeCustomCredentials(customId, customPw) {
+  if (!customId || !customPw) {
+    throw new Error("customId and customPw are required");
+  }
+
+  // 원본 CustomLogin의 Editor 전용 분기를 샘플 환경에 맞춘다.
+  // 실제 운영 계정의 비밀번호와 Cognito 설정은 공개하지 않는다.
+  return `custom:${hash(`${customId}:${customPw}`, playerHashSecret)}`;
+}
+
 export async function signUpPlayer(cognito, providerPlayerId, timezoneOffset) {
   const username = hash(providerPlayerId, playerHashSecret);
   const password = createInternalPassword(providerPlayerId);

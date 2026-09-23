@@ -11,6 +11,7 @@ namespace Portfolio.Game.Network
     {
         public static HttpServiceBase Instance { get; private set; }
         private UnityRestClient client;
+        private ISessionStore sessionStore;
 
         // 기존 구매 샘플과의 호환용이다. 신규 API 호출은 RestApi를 사용한다.
         public UnityRestClient Client => client;
@@ -26,6 +27,7 @@ namespace Portfolio.Game.Network
             int maxAttempts,
             int timeoutSeconds)
         {
+            this.sessionStore = sessionStore;
             client = new UnityRestClient(
                 this,
                 baseUrl,
@@ -33,6 +35,8 @@ namespace Portfolio.Game.Network
                 maxAttempts,
                 timeoutSeconds: timeoutSeconds);
         }
+
+        public void SetSession(LoginSession session) => sessionStore.SetSession(session);
 
         public void MakeApiCall<TRequest, TResponse>(
             TRequest request,
